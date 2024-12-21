@@ -29,29 +29,87 @@ const userCollection = client.db("my-book-shop").collection("Users");
 const booksCollection = client.db("my-book-shop").collection("books");
 async function run() {
   try {
-    // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
-    // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
 
+    // User related api
+
     // insert user
     app.post("/users", async (req, res) => {
       const userInfo = req.body;
-      const query = {email: req.body.email}
-      const user = userCollection.findOne(query)
-      if(user){
-        return res.send({message: "User already exist"})
+      const query = { email: req.body.email };
+      const user = userCollection.findOne(query);
+      if (user.email == query) {
+        return res.send({ message: "User already exist" });
       }
       console.log(userInfo);
       const result = await userCollection.insertOne(userInfo);
       res.send(result);
     });
-  } finally {
-    // Ensures that the client will close when you finish/error
-    //   await client.close();
+
+    // get user data api
+    app.get("/user/:email", async (req, res) => {
+      const email = req.params;
+      console.log(email);
+      const user = await userCollection.findOne(email);
+      res.send(user);
+
+
+    //   books related api
+
+    // insert book api
+    app.post("/books", async(req,res)=>{
+        const books = req.body
+        const query = {email: books.email, name:books.title}
+        const book =await booksCollection.findOne(query)
+        if(book){
+            return res.send("You have already added the book")
+        }
+        const insertedBook = await booksCollection.insertOne(books)
+        res.send(insertedBook)
+
+    })
+
+    // get all books api
+    app.get("/all-books",async(req,res)=>{
+
+        const { title, sorts, category, author } = req.query;
+        const query = {};
+        console.log(req.query)
+        if (title) {
+          query.title = { $regex: title, $options: "i" };
+        }
+        if (category) {
+          query.category = category;
+        }
+        if (author) {
+          query.author = { $regex: author, $options: "i" };
+        }
+        const sortOptions = sorts === "asc" ? 1 : -1;
+        const books =await booksCollection.find(query)
+        .sort({ price: sortOptions })
+        .toArray(query)
+       
+
+        const booksInfo =await booksCollection.find(
+        {},
+        { projection: { category: 1, author: 1 } }
+      ).toArray();
+
+      const authors = [...new Set(booksInfo.map((book) => book.author))];
+      const categories = [
+        ...new Set(booksInfo.map((book) => book.category))
+      ];
+      const totalBook = await booksCollection.countDocuments(query);
+      res.send({ books, authors, categories, totalBook });
+    
+    })
+    });
+  } catch (error) {
+    console.log(error);
   }
 }
 run().catch(console.dir);
