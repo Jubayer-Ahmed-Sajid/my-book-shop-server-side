@@ -8,12 +8,12 @@ require("dotenv").config();
 // Middleware configuration
 app.use(
   cors({
-    origin: "http://localhost:5173", 
-    credentials: true, 
+    origin: "http://localhost:5173",
+    credentials: true,
   })
 );
 
-app.use(express.json()); 
+app.use(express.json());
 
 // MongoDB connection URI using environment variables
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.vqva6ft.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -30,13 +30,15 @@ const client = new MongoClient(uri, {
 // Collections
 const userCollection = client.db("my-book-shop").collection("Users");
 const booksCollection = client.db("my-book-shop").collection("books");
-const testimonialCollection = client.db("my-book-shop").collection("testimonials");
+const testimonialCollection = client
+  .db("my-book-shop")
+  .collection("testimonials");
 
 // Main function to handle MongoDB operations
 async function run() {
   try {
-    await client.connect(); 
-    await client.db("admin").command({ ping: 1 }); 
+    await client.connect();
+    await client.db("admin").command({ ping: 1 });
     console.log("Successfully connected to MongoDB!");
 
     // User-related APIs
@@ -125,7 +127,10 @@ async function run() {
       const sortOptions = sorts === "asc" ? 1 : -1; // Ascending or descending sort
 
       // Fetch books with applied filters and sorting
-      const books = await booksCollection.find(query).sort({ price: sortOptions }).toArray();
+      const books = await booksCollection
+        .find(query)
+        .sort({ price: sortOptions })
+        .toArray();
 
       // Fetch unique authors and categories
       const booksInfo = await booksCollection
@@ -149,9 +154,18 @@ async function run() {
     // Get books for the featured section
     app.get("/featured-books", async (req, res) => {
       const count = parseInt(req.query.count) || 4; // Default to 4 books if count is not provided
-      const books = await booksCollection.aggregate([{ $sample: { size: count } }]).toArray();
+      const books = await booksCollection
+        .aggregate([{ $sample: { size: count } }])
+        .toArray();
       res.send(books);
     });
+
+    // Seller added books
+    app.get('/added-books/:email', async(req,res)=>{
+      const email = req.params.email;
+      const result = await booksCollection.find({email}).toArray()
+      res.send(result)
+    })
 
     // Testimonials-related APIs
 
