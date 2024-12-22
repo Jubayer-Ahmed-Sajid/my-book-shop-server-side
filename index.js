@@ -105,7 +105,14 @@ async function run() {
       const insertedBook = await booksCollection.insertOne(books);
       res.send(insertedBook);
     });
-
+// Update book
+app.patch("/book/update/:id", async (req, res) => {
+  const id = req.params.id;
+  const query = { _id: new ObjectId(id) };
+  const update = { $set: req.body };
+  const result = await booksCollection.updateOne(query, update);
+  res.send(result);
+});
     // Get all books with optional filtering and sorting
     app.get("/all-books", async (req, res) => {
       const { title, sorts, category, author } = req.query;
