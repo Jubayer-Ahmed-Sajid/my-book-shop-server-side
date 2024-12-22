@@ -161,11 +161,11 @@ async function run() {
     });
 
     // Seller added books
-    app.get('/added-books/:email', async(req,res)=>{
+    app.get("/added-books/:email", async (req, res) => {
       const email = req.params.email;
-      const result = await booksCollection.find({email}).toArray()
-      res.send(result)
-    })
+      const result = await booksCollection.find({ email }).toArray();
+      res.send(result);
+    });
 
     // Testimonials-related APIs
 
