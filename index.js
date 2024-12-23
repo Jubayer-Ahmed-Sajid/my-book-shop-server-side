@@ -30,28 +30,28 @@ const verifyToken = (req, res, next) => {
 };
 
 // verify seller
-const verifySeller =async (req, res, next) => {
+const verifySeller = async (req, res, next) => {
   const { email } = req.user;
-  const user =await userCollection.findOne({ email });
-  console.log(user)
+  const user = await userCollection.findOne({ email });
+  console.log(user);
   if (!user) return res.status(401).send("Access Denied");
   if (user.role !== "seller") return res.status(401).send("Access Denied");
   next();
 };
 // verify buyer
-const verifyBuyer = async(req, res, next) => {
+const verifyBuyer = async (req, res, next) => {
   const { email } = req.user;
-  const user =await userCollection.findOne({ email });
+  const user = await userCollection.findOne({ email });
   if (!user) return res.status(401).send("Access Denied");
   if (user.role !== "buyer") return res.status(401).send("Access Denied");
   next();
 };
 
 // verify admin
-const verifyAdmin =async (req, res, next) => {
+const verifyAdmin = async (req, res, next) => {
   const { email } = req.user;
-  const user =await userCollection.findOne({ email });
-  console.log(user)
+  const user = await userCollection.findOne({ email });
+  console.log(user);
   if (!user) return res.status(401).send("Access Denied");
   if (!user.isAdmin) return res.status(401).send("Access Denied");
   next();
@@ -120,7 +120,7 @@ async function run() {
       res.send(user);
     });
 
-    // Update wishlist for a user
+    // Add an item to the wishlist for a user
     app.patch(
       "/users/add-wishlist",
       verifyToken,
@@ -131,6 +131,22 @@ async function run() {
         const result = await userCollection.updateOne(
           { email },
           { $addToSet: { wishlist: new ObjectId(String(id)) } } // Avoid duplicates in the wishlist
+        );
+        res.send(result);
+      }
+    );
+
+    // Remove an item from the wishlist for a user
+    app.patch(
+      "/users/remove-wishlist",
+      verifyToken,
+      verifyBuyer,
+      async (req, res) => {
+        const { email, id } = req.body;
+        console.log(email, id);
+        const result = await userCollection.updateOne(
+          { email },
+          { $pull: { wishlist: new ObjectId(String(id)) } }
         );
         res.send(result);
       }
@@ -147,40 +163,74 @@ async function run() {
       res.send(result);
     });
 
+    // Remove an item from the cart for a user
+    app.patch(
+      "/users/remove-cart",
+      verifyToken,
+      verifyBuyer,
+      async (req, res) => {
+        const { email, id } = req.body;
+        console.log(email, id);
+        const result = await userCollection.updateOne(
+          { email },
+          { $pull: { cart: new ObjectId(String(id)) } }
+        );
+        res.send(result);
+      }
+    );
     // Get all users
-    app.get("/all-users",verifyToken,verifyAdmin, async (req, res) => {
+    app.get("/all-users", verifyToken, verifyAdmin, async (req, res) => {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
 
     // Admin status update
-    app.patch("/user/update/:email",verifyToken,verifyAdmin, async (req, res) => {
-      const email = req.params.email;
-      const query = { email };
-      const update = { $set: {isAdmin:req.body} };
-      const result = await userCollection.updateOne(query, update);
-      res.send(result); 
+    app.patch(
+      "/user/update/:email",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const email = req.params.email;
+        const query = { email };
+        const update = { $set: { isAdmin: req.body } };
+        const result = await userCollection.updateOne(query, update);
+        res.send(result);
+      }
+    );
 
-    })
     // approve seller status
-    app.patch("/seller/approve/:email",verifyToken,verifyAdmin, async (req, res) => {
-      const email = req.params.email;
-      const query = { email };
-      const update = { $set: {status:req.body} };
-      const result = await userCollection.updateOne(query, update);
-      res.send(result); 
-    })
+    app.patch(
+      "/seller/approve/:email",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const email = req.params.email;
+        const query = { email };
+        const update = { $set: { status: req.body } };
+        const result = await userCollection.updateOne(query, update);
+        res.send(result);
+      }
+    );
+
     // Delete user
-    app.delete("/user/delete/:email",verifyToken,verifyAdmin, async (req, res) => {
-      const email = req.params.email;
-      const query = { email };
-      const result = await userCollection.deleteOne(query);
-      res.send(result);
-    });
+    app.delete(
+      "/user/delete/:email",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const email = req.params.email;
+        const query = { email };
+        const result = await userCollection.deleteOne(query);
+        res.send(result);
+      }
+    );
     // Books-related APIs
 
     // Insert a new book
-    app.post("/books",verifyToken,(req, res, next) => {
+    app.post(
+      "/books",
+      verifyToken,
+      (req, res, next) => {
         verifySeller(req, res, (err) => {
           if (err) {
             verifyAdmin(req, res, next);
@@ -203,44 +253,53 @@ async function run() {
         res.send(insertedBook);
       }
     );
+
     // Update book
-    app.patch("/book/update/:id",verifyToken,(req, res, next) => {
-      verifySeller(req, res, (err) => {
-        if (err) {
-          verifyAdmin(req, res, next);
-        } else {
-          next();
-        }
-      });
-    }, async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const update = { $set: req.body };
-      const result = await booksCollection.updateOne(query, update);
-      res.send(result);
-    });
-   
+    app.patch(
+      "/book/update/:id",
+      verifyToken,
+      (req, res, next) => {
+        verifySeller(req, res, (err) => {
+          if (err) {
+            verifyAdmin(req, res, next);
+          } else {
+            next();
+          }
+        });
+      },
+      async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const update = { $set: req.body };
+        const result = await booksCollection.updateOne(query, update);
+        res.send(result);
+      }
+    );
+
     // Delete book
-    app.delete("/book/delete/:id",verifyToken,(req, res, next) => {
-      verifySeller(req, res, (err) => {
-        if (err) {
-          verifyAdmin(req, res, next);
-        } else {
-          next();
-        }
-      });
-    }, async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const result = await booksCollection.deleteOne(query);
-    });
+    app.delete(
+      "/book/delete/:id",
+      verifyToken,
+      (req, res, next) => {
+        verifySeller(req, res, (err) => {
+          if (err) {
+            verifyAdmin(req, res, next);
+          } else {
+            next();
+          }
+        });
+      },
+      async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await booksCollection.deleteOne(query);
+      }
+    );
+
     // Get all books with optional filtering and sorting
     app.get("/all-books", async (req, res) => {
       const { title, sorts, category, author } = req.query;
       const query = {};
-
-      console.log(req.query);
-
       // Filter by title, category, and author
       if (title) {
         query.title = { $regex: title, $options: "i" };
@@ -251,15 +310,11 @@ async function run() {
       if (author) {
         query.author = { $regex: author, $options: "i" };
       }
-
-      const sortOptions = sorts === "asc" ? 1 : -1; // Ascending or descending sort
-
-      // Fetch books with applied filters and sorting
+      const sortOptions = sorts === "asc" ? 1 : -1;
       const books = await booksCollection
         .find(query)
         .sort({ price: sortOptions })
         .toArray();
-
       // Fetch unique authors and categories
       const booksInfo = await booksCollection
         .find({}, { projection: { category: 1, author: 1 } })
@@ -272,11 +327,17 @@ async function run() {
     });
 
     // Get a single book by ID
-    app.get("/books/:id",verifyToken, async (req, res) => {
+    app.get("/books/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const book = await booksCollection.findOne(query);
       res.send(book);
+    });
+
+    // Get all books
+    app.get("/admin-books", verifyToken, verifyAdmin, async (req, res) => {
+      const result = await booksCollection.find().toArray();
+      res.send(result);
     });
 
     // Get books for the featured section
@@ -289,11 +350,16 @@ async function run() {
     });
 
     // Seller added books
-    app.get("/added-books/:email",verifyToken,verifySeller, async (req, res) => {
-      const email = req.params.email;
-      const result = await booksCollection.find({ email }).toArray();
-      res.send(result);
-    });
+    app.get(
+      "/added-books/:email",
+      verifyToken,
+      verifySeller,
+      async (req, res) => {
+        const email = req.params.email;
+        const result = await booksCollection.find({ email }).toArray();
+        res.send(result);
+      }
+    );
 
     // Testimonials-related APIs
 
