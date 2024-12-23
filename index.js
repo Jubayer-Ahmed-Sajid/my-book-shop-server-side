@@ -33,28 +33,27 @@ const verifyToken = (req, res, next) => {
 const verifySeller = (req, res, next) => {
   const { email } = req.user;
   const user = userCollection.findOne({ email });
-  if(!user) return res.status(401).send("Access Denied");
-  if(user.role !== "seller") return res.status(401).send("Access Denied");
+  if (!user) return res.status(401).send("Access Denied");
+  if (user.role !== "seller") return res.status(401).send("Access Denied");
   next();
- 
 };
 // verify buyer
 const verifyBuyer = (req, res, next) => {
   const { email } = req.user;
   const user = userCollection.findOne({ email });
-  if(!user) return res.status(401).send("Access Denied");
-  if(user.role !== "buyer") return res.status(401).send("Access Denied");
+  if (!user) return res.status(401).send("Access Denied");
+  if (user.role !== "buyer") return res.status(401).send("Access Denied");
   next();
-}
+};
 
 // verify admin
 const verifyAdmin = (req, res, next) => {
   const { email } = req.user;
   const user = userCollection.findOne({ email });
-  if(!user) return res.status(401).send("Access Denied"); 
-  if(!user.isAdmin) return res.status(401).send("Access Denied");
+  if (!user) return res.status(401).send("Access Denied");
+  if (!user.isAdmin) return res.status(401).send("Access Denied");
   next();
- }
+};
 
 app.use(express.json());
 
@@ -120,18 +119,23 @@ async function run() {
     });
 
     // Update wishlist for a user
-    app.patch("/users/add-wishlist", async (req, res) => {
-      const { email, id } = req.body;
-      console.log(email, id);
-      const result = await userCollection.updateOne(
-        { email },
-        { $addToSet: { wishlist: new ObjectId(String(id)) } } // Avoid duplicates in the wishlist
-      );
-      res.send(result);
-    });
+    app.patch(
+      "/users/add-wishlist",
+      verifyToken,
+      verifyBuyer,
+      async (req, res) => {
+        const { email, id } = req.body;
+        console.log(email, id);
+        const result = await userCollection.updateOne(
+          { email },
+          { $addToSet: { wishlist: new ObjectId(String(id)) } } // Avoid duplicates in the wishlist
+        );
+        res.send(result);
+      }
+    );
 
     // Add an item to the cart for a user
-    app.patch("/users/add-cart", async (req, res) => {
+    app.patch("/users/add-cart", verifyToken, verifyBuyer, async (req, res) => {
       const { email, id } = req.body;
       console.log(email, id);
       const result = await userCollection.updateOne(
@@ -144,21 +148,39 @@ async function run() {
     // Books-related APIs
 
     // Insert a new book
-    app.post("/books", async (req, res) => {
-      const books = req.body;
-      const query = { email: books.email, name: books.title };
+    app.post("/books",verifyToken,(req, res, next) => {
+        verifySeller(req, res, (err) => {
+          if (err) {
+            verifyAdmin(req, res, next);
+          } else {
+            next();
+          }
+        });
+      },
+      async (req, res) => {
+        const books = req.body;
+        const query = { email: books.email, name: books.title };
 
-      // Check if the book already exists
-      const book = await booksCollection.findOne(query);
-      if (book) {
-        return res.send("You have already added the book");
+        // Check if the book already exists
+        const book = await booksCollection.findOne(query);
+        if (book) {
+          return res.send("You have already added the book");
+        }
+
+        const insertedBook = await booksCollection.insertOne(books);
+        res.send(insertedBook);
       }
-
-      const insertedBook = await booksCollection.insertOne(books);
-      res.send(insertedBook);
-    });
+    );
     // Update book
-    app.patch("/book/update/:id", async (req, res) => {
+    app.patch("/book/update/:id",verifyToken,(req, res, next) => {
+      verifySeller(req, res, (err) => {
+        if (err) {
+          verifyAdmin(req, res, next);
+        } else {
+          next();
+        }
+      });
+    }, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const update = { $set: req.body };
@@ -166,7 +188,15 @@ async function run() {
       res.send(result);
     });
     // Delete book
-    app.delete("/book/delete/:id", async (req, res) => {
+    app.delete("/book/delete/:id",verifyToken,(req, res, next) => {
+      verifySeller(req, res, (err) => {
+        if (err) {
+          verifyAdmin(req, res, next);
+        } else {
+          next();
+        }
+      });
+    }, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await booksCollection.deleteOne(query);
@@ -209,7 +239,7 @@ async function run() {
     });
 
     // Get a single book by ID
-    app.get("/books/:id", async (req, res) => {
+    app.get("/books/:id",verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const book = await booksCollection.findOne(query);
@@ -226,7 +256,7 @@ async function run() {
     });
 
     // Seller added books
-    app.get("/added-books/:email", async (req, res) => {
+    app.get("/added-books/:email",verifyToken,verifySeller, async (req, res) => {
       const email = req.params.email;
       const result = await booksCollection.find({ email }).toArray();
       res.send(result);
