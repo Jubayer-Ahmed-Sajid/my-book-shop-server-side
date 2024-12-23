@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const port = process.env.PORT || 5000;
 const app = express();
+const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 
@@ -12,6 +13,30 @@ app.use(
     credentials: true,
   })
 );
+
+// verify token
+const verifyToken = (req, res, next) => {
+  const authorization = req.headers.authorization;
+  if (!authorization) return res.status(401).send("Access Denied");
+  const token = authorization.split(" ")[1];
+  jwt.verify(token, process.env.TOKEN_SECRET, (err, decoded) => {
+    if (err) {
+      res.status(400).send("Invalid Token");
+    } else {
+      req.user = decoded;
+      next();
+    }
+  });
+};
+// verify seller
+const verifySeller = (req, res, next) => {
+  const { email } = req.user;
+  const user = userCollection.findOne({ email });
+  if(!user) return res.status(401).send("Access Denied");
+  if(user.role !== "seller") return res.status(401).send("Access Denied");
+  next();
+ 
+};
 
 app.use(express.json());
 
@@ -40,6 +65,15 @@ async function run() {
     await client.connect();
     await client.db("admin").command({ ping: 1 });
     console.log("Successfully connected to MongoDB!");
+
+    // jwt token
+    app.post("/jwt", async (req, res) => {
+      const { email } = req.body;
+      const token = jwt.sign({ email }, process.env.TOKEN_SECRET, {
+        expiresIn: "1h",
+      });
+      res.send({ token });
+    });
 
     // User-related APIs
 
