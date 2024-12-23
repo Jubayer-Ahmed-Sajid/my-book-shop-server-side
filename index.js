@@ -9,7 +9,7 @@ require("dotenv").config();
 // Middleware configuration
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: "https://book-shop-jp-project.vercel.app",
     credentials: true,
   })
 );
