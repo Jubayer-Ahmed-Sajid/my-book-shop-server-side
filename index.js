@@ -28,6 +28,7 @@ const verifyToken = (req, res, next) => {
     }
   });
 };
+
 // verify seller
 const verifySeller = (req, res, next) => {
   const { email } = req.user;
@@ -37,6 +38,23 @@ const verifySeller = (req, res, next) => {
   next();
  
 };
+// verify buyer
+const verifyBuyer = (req, res, next) => {
+  const { email } = req.user;
+  const user = userCollection.findOne({ email });
+  if(!user) return res.status(401).send("Access Denied");
+  if(user.role !== "buyer") return res.status(401).send("Access Denied");
+  next();
+}
+
+// verify admin
+const verifyAdmin = (req, res, next) => {
+  const { email } = req.user;
+  const user = userCollection.findOne({ email });
+  if(!user) return res.status(401).send("Access Denied"); 
+  if(!user.isAdmin) return res.status(401).send("Access Denied");
+  next();
+ }
 
 app.use(express.json());
 
