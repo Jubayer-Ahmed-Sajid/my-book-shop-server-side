@@ -51,6 +51,7 @@ const verifyBuyer = async(req, res, next) => {
 const verifyAdmin =async (req, res, next) => {
   const { email } = req.user;
   const user =await userCollection.findOne({ email });
+  console.log(user)
   if (!user) return res.status(401).send("Access Denied");
   if (!user.isAdmin) return res.status(401).send("Access Denied");
   next();
@@ -149,6 +150,31 @@ async function run() {
     // Get all users
     app.get("/all-users",verifyToken,verifyAdmin, async (req, res) => {
       const result = await userCollection.find().toArray();
+      res.send(result);
+    });
+
+    // Admin status update
+    app.patch("/user/update/:email",verifyToken,verifyAdmin, async (req, res) => {
+      const email = req.params.email;
+      const query = { email };
+      const update = { $set: {isAdmin:req.body} };
+      const result = await userCollection.updateOne(query, update);
+      res.send(result); 
+
+    })
+    // approve seller status
+    app.patch("/seller/approve/:email",verifyToken,verifyAdmin, async (req, res) => {
+      const email = req.params.email;
+      const query = { email };
+      const update = { $set: {status:req.body} };
+      const result = await userCollection.updateOne(query, update);
+      res.send(result); 
+    })
+    // Delete user
+    app.delete("/user/delete/:email",verifyToken,verifyAdmin, async (req, res) => {
+      const email = req.params.email;
+      const query = { email };
+      const result = await userCollection.deleteOne(query);
       res.send(result);
     });
     // Books-related APIs
