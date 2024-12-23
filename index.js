@@ -178,6 +178,32 @@ async function run() {
         res.send(result);
       }
     );
+
+    // buy confirmation by reducing the quantity of the book and removing it from the cart
+    app.patch(
+      "/users/buy",
+      verifyToken,
+      verifyBuyer,
+      async (req, res) => {
+        const { email, id } = req.body;
+        console.log(email, id);
+        
+        const book = await booksCollection.findOne({ _id: new ObjectId(id)});
+        if (book.stock === 0) {
+          return res.send("Out of stock");
+        }
+        const result = await booksCollection.updateOne(
+          { _id: new ObjectId(id)},
+          { $inc: { stock: -1 } }
+        );
+        const user = await userCollection.updateOne(
+          { email },
+          { $pull: { cart: new ObjectId(String(id)) } }
+        );
+        res.send(result);
+      }
+    );
+    
     // Get all users
     app.get("/all-users", verifyToken, verifyAdmin, async (req, res) => {
       const result = await userCollection.find().toArray();
