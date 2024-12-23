@@ -30,26 +30,27 @@ const verifyToken = (req, res, next) => {
 };
 
 // verify seller
-const verifySeller = (req, res, next) => {
+const verifySeller =async (req, res, next) => {
   const { email } = req.user;
-  const user = userCollection.findOne({ email });
+  const user =await userCollection.findOne({ email });
+  console.log(user)
   if (!user) return res.status(401).send("Access Denied");
   if (user.role !== "seller") return res.status(401).send("Access Denied");
   next();
 };
 // verify buyer
-const verifyBuyer = (req, res, next) => {
+const verifyBuyer = async(req, res, next) => {
   const { email } = req.user;
-  const user = userCollection.findOne({ email });
+  const user =await userCollection.findOne({ email });
   if (!user) return res.status(401).send("Access Denied");
   if (user.role !== "buyer") return res.status(401).send("Access Denied");
   next();
 };
 
 // verify admin
-const verifyAdmin = (req, res, next) => {
+const verifyAdmin =async (req, res, next) => {
   const { email } = req.user;
-  const user = userCollection.findOne({ email });
+  const user =await userCollection.findOne({ email });
   if (!user) return res.status(401).send("Access Denied");
   if (!user.isAdmin) return res.status(401).send("Access Denied");
   next();
@@ -145,6 +146,11 @@ async function run() {
       res.send(result);
     });
 
+    // Get all users
+    app.get("/all-users",verifyToken,verifyAdmin, async (req, res) => {
+      const result = await userCollection.find().toArray();
+      res.send(result);
+    });
     // Books-related APIs
 
     // Insert a new book
@@ -187,6 +193,7 @@ async function run() {
       const result = await booksCollection.updateOne(query, update);
       res.send(result);
     });
+   
     // Delete book
     app.delete("/book/delete/:id",verifyToken,(req, res, next) => {
       verifySeller(req, res, (err) => {
