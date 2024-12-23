@@ -40,9 +40,9 @@ TOKEN_SECRET=7b0792285121564805008d121fed3e486ff9b34867f67169c8346d2f7cfe1486bdb
 
 ## Environment Variables
 
-- : MongoDB username
-- : MongoDB password
-- : Secret key for JWT token generation
+DB_USER = my-book-shop
+DB_PASS = 3frPMmKKF86kGp5U
+TOKEN_SECRET=7b0792285121564805008d121fed3e486ff9b34867f67169c8346d2f7cfe1486bdb27cafdc5ee55784e10e67aa4a108b829fbb4905cc0afeb2b7545960831e37
 
 ## API Endpoints
 
