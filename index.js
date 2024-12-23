@@ -113,6 +113,12 @@ app.patch("/book/update/:id", async (req, res) => {
   const result = await booksCollection.updateOne(query, update);
   res.send(result);
 });
+// Delete book
+app.delete("/book/delete/:id", async (req, res) => {
+  const id = req.params.id;
+  const query = { _id: new ObjectId(id) };
+  const result = await booksCollection.deleteOne(query);
+});
     // Get all books with optional filtering and sorting
     app.get("/all-books", async (req, res) => {
       const { title, sorts, category, author } = req.query;
