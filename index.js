@@ -179,7 +179,7 @@ async function run() {
       }
     );
 
-    // buy confirmation by reducing the quantity of the book and removing it from the cart
+    // Buying api
     app.patch(
       "/users/buy",
       verifyToken,
