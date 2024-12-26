@@ -89,7 +89,7 @@ async function run() {
     app.post("/jwt", async (req, res) => {
       const { email } = req.body;
       const token = jwt.sign({ email }, process.env.TOKEN_SECRET, {
-        expiresIn: "1h",
+        expiresIn: "10d",
       });
       res.send({ token });
     });
@@ -218,7 +218,7 @@ async function run() {
       async (req, res) => {
         const email = req.params.email;
         const query = { email };
-        const update = { $set: { isAdmin: req.body } };
+        const update = { $set:req.body };
         const result = await userCollection.updateOne(query, update);
         res.send(result);
       }
@@ -232,11 +232,21 @@ async function run() {
       async (req, res) => {
         const email = req.params.email;
         const query = { email };
-        const update = { $set: { status: req.body } };
+        const update = { $set:  req.body  };
         const result = await userCollection.updateOne(query, update);
         res.send(result);
       }
     );
+
+    // Promote buyer to seller
+    app.patch("/users/promote-to-seller/:email", verifyToken, verifyAdmin, async (req, res) => {
+      const email = req.params.email;
+      console.log(req.body);
+      const query = { email };
+      const update = { $set: req.body  };
+      const result = await userCollection.updateOne(query, update);
+      res.send(result);
+    });
 
     // Delete user
     app.delete(
@@ -331,7 +341,7 @@ async function run() {
         query.title = { $regex: title, $options: "i" };
       }
       if (category) {
-        query.category = category;
+        query.category = { $regex: category, $options: "i" };
       }
       if (author) {
         query.author = { $regex: author, $options: "i" };
