@@ -7,6 +7,7 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 
 // Middleware configuration
+app.use(express.json());
 app.use(
   cors({
     // origin: "http://localhost:5173",
@@ -18,6 +19,7 @@ app.use(
 
 // verify token
 const verifyToken = (req, res, next) => {
+  
   const authorization = req.headers.authorization;
   if (!authorization) return res.status(401).send("Access Denied");
   const token = authorization.split(" ")[1];
@@ -26,6 +28,7 @@ const verifyToken = (req, res, next) => {
       res.status(400).send("Invalid Token");
     } else {
       req.user = decoded;
+      console.log("user is",req.user);
       next();
     }
   });
@@ -35,7 +38,7 @@ const verifyToken = (req, res, next) => {
 const verifySeller = async (req, res, next) => {
   const { email } = req.user;
   const user = await userCollection.findOne({ email });
-  console.log(user);
+  // console.log(user);
   if (!user) return res.status(401).send("Access Denied");
   if (user.role !== "seller") return res.status(401).send("Access Denied");
   next();
@@ -53,13 +56,12 @@ const verifyBuyer = async (req, res, next) => {
 const verifyAdmin = async (req, res, next) => {
   const { email } = req.user;
   const user = await userCollection.findOne({ email });
-  console.log(user);
+  console.log("admin is ",user);
   if (!user) return res.status(401).send("Access Denied");
   if (!user.isAdmin) return res.status(401).send("Access Denied");
   next();
 };
 
-app.use(express.json());
 
 // MongoDB connection URI using environment variables
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.vqva6ft.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -89,7 +91,8 @@ async function run() {
 
     // jwt token
     app.post("/jwt", async (req, res) => {
-      const { email } = req.body;
+      const  {email}  = req.body; 
+      console.log("sign",email);
       const token = jwt.sign({ email }, process.env.TOKEN_SECRET, {
         expiresIn: "10d",
       });
@@ -109,7 +112,7 @@ async function run() {
         return res.send({ message: "User already exists" });
       }
 
-      console.log(userInfo);
+     
       const result = await userCollection.insertOne(userInfo);
       res.send(result);
     });
@@ -365,7 +368,7 @@ async function run() {
     });
 
     // Get a single book by ID
-    app.get("/books/:id", verifyToken, async (req, res) => {
+    app.get("/books/:id",verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const book = await booksCollection.findOne(query);
